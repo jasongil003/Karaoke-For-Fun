@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
 /** A tiny HTTP server on the TV: serves the phone page, the TV page, the queue API and the QR code. */
 public final class WebServer {
     public static final int PORT = 8080;
-    private static final String TAG = "Videoke";
+    private static final String TAG = "KaraokeForFun";
     private static WebServer instance;
 
     private final Context ctx;
@@ -186,6 +186,14 @@ public final class WebServer {
             case "/api/remove": queue.remove(b.optLong("id")); break;
             case "/api/up": queue.moveUp(b.optLong("id")); break;
             case "/api/pause": queue.togglePause(); break;
+            case "/api/restart": queue.restart(); break;
+            case "/api/volume":
+                if (b.has("value")) queue.setVolume(b.optInt("value")); else queue.changeVolume(b.optInt("delta"));
+                break;
+            case "/api/progress":   // the TV player reports its position; small reply
+                queue.progress(b.optLong("id"), b.optDouble("pos", 0), b.optDouble("dur", 0));
+                json(out, new JSONObject().put("ok", true));
+                return;
             case "/api/clear": queue.clear(); break;
             default: send(out, 404, "text/plain", "not found".getBytes()); return;
         }

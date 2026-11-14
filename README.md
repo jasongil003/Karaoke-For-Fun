@@ -7,15 +7,25 @@ No accounts, no servers, no app for guests to install: the TV app hosts a small 
 
 ## How it works
 
-1. Open **Videoke Night** on the TV. It shows a QR code and the queue.
+1. Open **Karaoke For Fun** on the TV. It shows a big QR code.
 2. Guests scan the QR code with their phone camera (they must be on the same Wi-Fi as the TV).
+   The TV finds its own Wi-Fi address and puts it in the QR code, so nobody types an IP address.
 3. They type their name, search for a song, and tap **Add**. Their phone shows their place in line.
-4. The TV plays each song through YouTube's official embedded player, then moves to the next one.
+4. The TV plays each song **full screen** through YouTube's official embedded player, then moves to the next one.
+
+**On the TV, during a song:**
+- A "Now singing: *name*" banner at the start of each song.
+- A small QR card in the corner for the first 20 seconds of each song and for 20 seconds every 5 minutes
+  (and for the last 90 seconds if nobody is in line). Change these at the top of `tv.html`.
+- An "Up next: *name*" pop-up in the last 25 seconds of a song. The full line is only on the phones.
+- A thin progress line along the bottom.
 
 **On the phone:** search with quick suggestion chips, add songs, see who's singing and your place in line,
-pause, skip, move songs up or remove them.
+a progress bar with time left, start over / play-pause / next, volume, move songs up or remove them.
 
-**On the TV remote:** OK = pause/play · Right = skip · Up/Down = hide/show the side panel.
+**On the TV remote:** OK = pause/play · Right = next song · Left = start over · Up/Down = show/hide the QR card.
+
+The line is saved on the TV, so it survives the app being closed, updated, or the TV restarting.
 
 Videos that can't play outside YouTube are filtered out before they're shown (embeddable + syndicated only,
 public, not age-restricted, not region-blocked). If a video still fails on the TV, it is skipped and
@@ -91,7 +101,7 @@ adb install -r app/build/outputs/apk/release/app-release.apk
 adb shell am start -n com.videokenight.app/.MainActivity
 ```
 
-The app appears in the TV's app list as **Videoke Night**.
+The app appears in the TV's app list as **Karaoke For Fun**.
 
 > Installing an update restarts the app and clears the current queue, so don't update mid-song.
 
@@ -101,10 +111,10 @@ The app appears in the TV's app list as **Videoke Night**.
 app/src/main/java/com/videokenight/app/
   MainActivity.java   full-screen WebView for the TV page, remote control keys
   WebServer.java      tiny HTTP server on port 8080: pages, queue API, YouTube search, QR code
-  Queue.java          the shared song queue
+  Queue.java          the shared song queue (saved on the TV), volume, progress
   Blocklist.java      videos that failed on this TV, hidden from future searches
 app/src/main/assets/
-  tv.html             TV screen: YouTube player, QR code, now singing, up next
+  tv.html             TV screen: full-screen YouTube player, timed QR card, now-singing and up-next pop-ups
   phone.html          guest page: name, search, add, queue
 ```
 
@@ -113,7 +123,7 @@ app/src/main/assets/
 - For **personal and family use**. YouTube's terms don't allow charging for access to YouTube videos,
   so don't sell or paywall this app.
 - Song quality depends on each YouTube video, and YouTube ads may play between songs.
-- The queue lives in memory: it clears if the app is closed or the TV restarts.
+- Guests must be on the same Wi-Fi network as the TV.
 - Guests must be on the same Wi-Fi as the TV. Anyone on that Wi-Fi can open the page and control the queue.
 
 ## Credits

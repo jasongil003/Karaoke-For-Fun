@@ -9,7 +9,7 @@
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
     <application
-        android:label="Videoke Night"
+        android:label="Karaoke For Fun"
         android:icon="@drawable/banner"
         android:banner="@drawable/banner"
         android:usesCleartextTraffic="true"

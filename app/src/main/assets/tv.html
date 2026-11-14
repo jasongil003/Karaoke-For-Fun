@@ -3,92 +3,119 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Videoke Night</title>
+<title>Karaoke For Fun</title>
 <style>
-  :root { --bg:#0b0b12; --panel:#15151f; --muted:#9a9ab0; --text:#f4f4fa; --accent:#ff3d7f; --accent2:#ffb347; }
+  :root { --bg:#0b0a12; --pink:#ff3d7f; --orange:#ffa94d; --text:#f6f4fb; --muted:#b8b3c8; }
   * { box-sizing:border-box; margin:0; padding:0; }
-  html,body { width:100%; height:100%; background:var(--bg); color:var(--text);
-    font-family: "Roboto", system-ui, sans-serif; overflow:hidden; }
-  #stage { position:absolute; inset:0; display:flex; }
-  #playerWrap { flex:1; position:relative; background:#000; }
+  html,body { width:100%; height:100%; background:#000; color:var(--text); overflow:hidden;
+    font-family:"Roboto", system-ui, sans-serif; }
   #player { position:absolute; inset:0; width:100%; height:100%; border:0; }
-  #side { width:25%; min-width:300px; background:var(--panel); padding:16px 18px; display:flex; flex-direction:column;
-    gap:10px; transition: margin-right .3s; overflow:hidden; }
-  #side .qrBox { padding:6px; border-radius:10px; }
-  #side .qrBox img { width:110px; height:110px; }
-  #side .brand { font-size:20px; }
-  #side .scan { font-size:14px; }
-  #side .now { padding:10px 12px; }
-  #side .now .singer { font-size:18px; }
-  #side .now .title { font-size:13px; }
-  body.noSide #side { margin-right:-25%; min-width:0; width:0; padding:0; overflow:hidden; }
-  .brand { font-size:26px; font-weight:800; letter-spacing:.5px; }
-  .brand span { color:var(--accent); }
-  .qrBox { background:#fff; border-radius:14px; padding:10px; align-self:center; }
-  .qrBox img { display:block; width:190px; height:190px; }
-  .scan { text-align:center; font-size:17px; color:var(--muted); line-height:1.35; }
-  .scan b { color:var(--text); }
-  h3 { font-size:14px; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
-  .now { background:linear-gradient(135deg, rgba(255,61,127,.25), rgba(255,179,71,.15)); border-radius:12px; padding:14px; }
-  .now .singer { font-size:22px; font-weight:700; }
-  .now .title { font-size:15px; color:#ddd; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  ol { list-style:none; display:flex; flex-direction:column; gap:10px; overflow:hidden; flex:1; }
-  li { display:flex; gap:12px; align-items:center; }
-  li .n { width:28px; height:28px; border-radius:50%; background:#2a2a3a; display:flex; align-items:center; justify-content:center;
-    font-weight:700; font-size:14px; flex:none; }
-  li .who { font-weight:700; font-size:16px; }
-  li .what { font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
-  .empty { color:var(--muted); font-size:15px; }
-  .keys { font-size:12px; color:#6f6f88; line-height:1.5; }
-  /* Idle screen */
-  #idle { position:absolute; inset:0; display:none; align-items:center; justify-content:center; gap:70px;
-    background: radial-gradient(circle at 30% 30%, #2a0f2a 0%, var(--bg) 60%); }
+
+  .glass { background:rgba(12,10,20,.78); border:1px solid rgba(255,255,255,.12); border-radius:22px;
+    box-shadow:0 18px 50px rgba(0,0,0,.55); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+
+  /* Idle: nobody singing */
+  #idle { position:absolute; inset:0; display:none; align-items:center; justify-content:center; gap:80px; z-index:4;
+    background:radial-gradient(circle at 25% 30%, #3a0f2e 0%, var(--bg) 60%); }
   body.idle #idle { display:flex; }
-  #idle h1 { font-size:64px; font-weight:900; line-height:1.05; }
-  #idle h1 span { color:var(--accent); }
-  #idle p { font-size:26px; color:#cfcfe0; margin-top:18px; line-height:1.4; }
-  #idle .url { font-size:20px; color:var(--accent2); margin-top:14px; }
-  #idle .qrBox img { width:320px; height:320px; }
-  /* Banner when a new singer starts */
-  #banner { position:absolute; left:50%; top:40px; transform:translate(-50%, -150%); background:rgba(0,0,0,.8);
-    border:2px solid var(--accent); border-radius:999px; padding:16px 34px; font-size:30px; font-weight:800;
-    transition: transform .5s, opacity .5s; white-space:nowrap; z-index:5; opacity:0; }
+  #idle h1 { font-size:66px; font-weight:900; line-height:1.02; letter-spacing:-1px; }
+  #idle h1 span { background:linear-gradient(90deg, var(--pink), var(--orange)); -webkit-background-clip:text; color:transparent; }
+  #idle p { font-size:26px; color:#d9d4e6; margin-top:20px; line-height:1.4; }
+  #idle .hint { font-size:19px; color:var(--muted); margin-top:12px; }
+  #idle .url { font-size:20px; color:var(--orange); margin-top:16px; }
+  .qrimg { background:#fff; border-radius:18px; padding:14px; }
+  .qrimg img { display:block; }
+  #idle .qrimg img { width:330px; height:330px; }
+
+  /* Corner QR card, shown on a schedule */
+  #qrCard { position:absolute; right:32px; bottom:32px; z-index:6; display:flex; align-items:center; gap:18px; padding:16px 22px 16px 16px;
+    transform:translateX(130%); transition:transform .6s cubic-bezier(.2,.9,.3,1.1); }
+  #qrCard.show { transform:none; }
+  #qrCard .qrimg { padding:8px; border-radius:12px; }
+  #qrCard .qrimg img { width:140px; height:140px; }
+  #qrCard b { display:block; font-size:24px; font-weight:800; }
+  #qrCard small { display:block; font-size:16px; color:var(--muted); margin-top:6px; max-width:240px; line-height:1.35; }
+  #qrCard .u { color:var(--orange); font-size:15px; margin-top:8px; }
+
+  /* Now singing banner */
+  #banner { position:absolute; left:50%; top:36px; z-index:6; padding:16px 34px; display:flex; align-items:center; gap:14px;
+    transform:translate(-50%, -160%); opacity:0; transition:transform .6s cubic-bezier(.2,.9,.3,1.1), opacity .4s; white-space:nowrap; }
   #banner.show { transform:translate(-50%, 0); opacity:1; }
-  #pausedTag { position:absolute; left:24px; bottom:24px; background:rgba(0,0,0,.75); padding:10px 20px; border-radius:10px;
-    font-size:24px; font-weight:700; display:none; z-index:5; }
-  body.paused #pausedTag { display:block; }
+  #banner .mic { width:46px; height:46px; border-radius:50%; display:grid; place-items:center; font-size:24px;
+    background:linear-gradient(135deg, var(--pink), var(--orange)); }
+  #banner small { display:block; font-size:14px; letter-spacing:2px; text-transform:uppercase; color:#ffc7da; }
+  #banner b { font-size:30px; font-weight:800; }
+
+  /* Up next popup */
+  #upnext { position:absolute; left:32px; bottom:32px; z-index:6; display:flex; align-items:center; gap:16px; padding:14px 22px 14px 14px;
+    max-width:56%; transform:translateX(-130%); transition:transform .6s cubic-bezier(.2,.9,.3,1.1); }
+  #upnext.show { transform:none; }
+  #upnext img { width:128px; height:72px; object-fit:cover; border-radius:12px; background:#000; flex:none; }
+  #upnext small { display:block; font-size:14px; letter-spacing:2px; text-transform:uppercase; color:var(--orange); font-weight:700; }
+  #upnext b { display:block; font-size:28px; font-weight:800; margin-top:2px; }
+  #upnext span { display:block; font-size:16px; color:var(--muted); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #upnext .count { font-size:15px; color:#fff; margin-top:6px; }
+
+  /* Pause overlay */
+  #paused { position:absolute; inset:0; z-index:5; display:none; align-items:center; justify-content:flex-start; flex-direction:column; gap:18px;
+    padding-top:16vh; background:rgba(0,0,0,.55); }
+  body.paused:not(.idle) #paused { display:flex; }
+  #paused .ring { width:150px; height:150px; border-radius:50%; display:grid; place-items:center;
+    background:rgba(255,255,255,.12); border:3px solid rgba(255,255,255,.6); }
+  #paused .ring i { display:flex; gap:20px; } #paused .ring i::before, #paused .ring i::after { content:""; width:22px; height:66px; border-radius:6px; background:#fff; }
+  #paused p { font-size:26px; font-weight:700; } #paused small { font-size:18px; color:var(--muted); }
+
+  /* Quick action feedback */
+  #flash { position:absolute; left:50%; top:50%; z-index:7; transform:translate(-50%,-50%) scale(.8); opacity:0; pointer-events:none;
+    padding:22px 40px; font-size:34px; font-weight:800; transition:transform .25s, opacity .25s; }
+  #flash.show { transform:translate(-50%,-50%) scale(1); opacity:1; }
+
+  /* Thin progress line along the bottom */
+  #bar { position:absolute; left:0; bottom:0; height:5px; z-index:6; background:linear-gradient(90deg, var(--pink), var(--orange));
+    width:0; transition:width 1s linear; }
+  body.idle #bar { display:none; }
 </style>
 </head>
 <body class="idle">
-<div id="stage">
-  <div id="playerWrap"><div id="player"></div><div id="banner"></div><div id="pausedTag">⏸ Paused</div></div>
-  <aside id="side">
-    <div class="brand">🎤 Videoke <span>Night</span></div>
-    <div class="qrBox"><img class="qr" alt="QR code"></div>
-    <div class="scan">Scan to <b>add a song</b><br><small class="urlText"></small></div>
-    <div>
-      <h3>Now singing</h3>
-      <div class="now"><div class="singer" id="nowSinger">—</div><div class="title" id="nowTitle"></div></div>
-    </div>
-    <h3>Up next</h3>
-    <ol id="next"></ol>
-    <div class="keys">OK: pause/play · ▶ Right: skip · ▲▼: hide/show this panel</div>
-  </aside>
-</div>
+<div id="player"></div>
+<div id="bar"></div>
+
 <div id="idle">
   <div>
-    <h1>🎤 Videoke<br><span>Night</span></h1>
+    <h1>🎤 Karaoke<br><span>For Fun</span></h1>
     <p>Scan the code with your phone camera,<br>pick a song, and get in line!</p>
-    <p style="font-size:20px;color:#9a9ab0">Phones must be on this home Wi-Fi.</p>
+    <div class="hint">Phones must be on this home Wi-Fi.</div>
     <div class="url urlText"></div>
   </div>
-  <div class="qrBox"><img class="qr" alt="QR code"></div>
+  <div class="qrimg"><img class="qr" alt="QR code"></div>
 </div>
 
-<script>
-let player = null, playerReady = false, loadedSongId = 0, lastVersion = 0, state = null, bannerTimer = null;
+<div id="banner" class="glass"><div class="mic">🎤</div><div><small>Now singing</small><b id="bannerName"></b></div></div>
 
-function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+<div id="upnext" class="glass">
+  <img id="upThumb" alt="">
+  <div style="min-width:0"><small>Up next · get ready!</small><b id="upName"></b><span id="upTitle"></span><div class="count" id="upCount"></div></div>
+</div>
+
+<div id="qrCard" class="glass">
+  <div class="qrimg"><img class="qr" alt="QR code"></div>
+  <div><b id="qrHead">Want to sing?</b><small id="qrSub">Scan with your phone camera to add a song</small><div class="u urlText"></div></div>
+</div>
+
+<div id="paused"><div class="ring"><i></i></div><p>Paused</p><small>Press OK on the remote to continue</small></div>
+<div id="flash" class="glass"></div>
+
+<script>
+// ---- Settings ----
+const QR_EVERY_MIN = 5;        // show the QR card every N minutes during a song
+const QR_SHOW_SEC = 20;        // ...for this many seconds
+const QR_AT_START_SEC = 20;    // and for the first N seconds of every song
+const UPNEXT_SEC = 25;         // pop up "Up next" in the last N seconds of a song
+const EMPTY_LINE_SEC = 90;     // if nobody is in line, keep the QR up for the last N seconds
+
+let player = null, playerReady = false, loadedSongId = 0, lastVersion = 0, state = null;
+let seenRestart = null, appliedVolume = null, songStartedAt = 0, manualQrUntil = 0;
+const $ = id => document.getElementById(id);
 
 async function post(path, body) {
   try {
@@ -97,28 +124,33 @@ async function post(path, body) {
   } catch (e) { return null; }
 }
 
+let bannerTimer, flashTimer;
+function showBanner(name) {
+  $('bannerName').textContent = name;
+  $('banner').classList.add('show');
+  clearTimeout(bannerTimer); bannerTimer = setTimeout(() => $('banner').classList.remove('show'), 7000);
+}
+function flash(text) {
+  $('flash').textContent = text; $('flash').classList.add('show');
+  clearTimeout(flashTimer); flashTimer = setTimeout(() => $('flash').classList.remove('show'), 1400);
+}
+
 function render(st) {
   document.body.classList.toggle('idle', !st.current);
   document.body.classList.toggle('paused', !!st.paused);
   document.querySelectorAll('.urlText').forEach(el => el.textContent = st.url || 'Connect the TV to Wi-Fi');
-  document.getElementById('nowSinger').textContent = st.current ? st.current.singer : '—';
-  document.getElementById('nowTitle').textContent = st.current ? st.current.title : '';
-  const ol = document.getElementById('next');
-  ol.innerHTML = st.upcoming.length ? st.upcoming.slice(0, 8).map((s, i) =>
-    `<li><div class="n">${i + 1}</div><div><div class="who">${esc(s.singer)}</div><div class="what">${esc(s.title)}</div></div></li>`).join('')
-    : '<div class="empty">No one in line yet. Scan the code!</div>';
-}
-
-function showBanner(text) {
-  const b = document.getElementById('banner');
-  b.textContent = text;
-  b.classList.add('show');
-  clearTimeout(bannerTimer);
-  bannerTimer = setTimeout(() => b.classList.remove('show'), 6000);
+  const n = st.upcoming[0];
+  if (n) {
+    $('upName').textContent = n.singer;
+    $('upTitle').textContent = n.title;
+    $('upThumb').src = n.thumb || '';
+    $('upCount').textContent = st.upcoming.length > 1 ? `+${st.upcoming.length - 1} more in line` : '';
+  }
 }
 
 function syncPlayer(st) {
   if (!playerReady) return;
+  if (appliedVolume !== st.volume) { player.setVolume(st.volume); appliedVolume = st.volume; }
   const cur = st.current;
   if (!cur) {
     if (loadedSongId) { player.stopVideo(); loadedSongId = 0; }
@@ -126,13 +158,46 @@ function syncPlayer(st) {
   }
   if (cur.id !== loadedSongId) {
     loadedSongId = cur.id;
+    seenRestart = st.restartSeq;
+    songStartedAt = Date.now();
     player.loadVideoById(cur.videoId);
-    showBanner('🎤 Now singing: ' + cur.singer);
+    showBanner(cur.singer);
     return;
+  }
+  if (seenRestart !== st.restartSeq) {
+    seenRestart = st.restartSeq;
+    player.seekTo(0, true); player.playVideo();
+    songStartedAt = Date.now();
+    flash('⏮ From the top!');
   }
   const ps = player.getPlayerState();
   if (st.paused && ps === YT.PlayerState.PLAYING) player.pauseVideo();
   if (!st.paused && ps === YT.PlayerState.PAUSED) player.playVideo();
+}
+
+// Decide what pops up: the corner QR card and the "up next" card.
+function overlays() {
+  const st = state;
+  let showQr = false, showNext = false, head = 'Want to sing?', sub = 'Scan with your phone camera to add a song';
+  if (st && st.current && playerReady) {
+    const pos = player.getCurrentTime ? player.getCurrentTime() : 0;
+    const dur = player.getDuration ? player.getDuration() : 0;
+    const left = dur > 0 ? dur - pos : Infinity;
+    const sinceStart = (Date.now() - songStartedAt) / 1000;
+    const minute = Math.floor(sinceStart);
+    if (sinceStart < QR_AT_START_SEC) showQr = true;
+    if (minute >= QR_EVERY_MIN * 60 && (minute % (QR_EVERY_MIN * 60)) < QR_SHOW_SEC) showQr = true;
+    if (left <= UPNEXT_SEC && st.upcoming.length) { showNext = true; showQr = false; }
+    if (left <= EMPTY_LINE_SEC && !st.upcoming.length) {
+      showQr = true; head = 'Nobody is next!'; sub = 'Scan now to sing the next song';
+    }
+    $('bar').style.width = dur > 0 ? (100 * pos / dur).toFixed(2) + '%' : '0';
+  }
+  if (Date.now() < manualQrUntil) showQr = true;
+  if (st && st.paused) showQr = true;
+  $('qrHead').textContent = head; $('qrSub').textContent = sub;
+  $('qrCard').classList.toggle('show', showQr && !(st && !st.current));
+  $('upnext').classList.toggle('show', showNext);
 }
 
 async function poll() {
@@ -142,39 +207,48 @@ async function poll() {
     if (st.version !== lastVersion) { lastVersion = st.version; render(st); }
     syncPlayer(st);
   } catch (e) { }
-  setTimeout(poll, 1200);
+  setTimeout(poll, 1000);
 }
+
+// Tell the phones where the song is, for their progress bar.
+setInterval(() => {
+  if (!playerReady || !state || !state.current) return;
+  post('/api/progress', { id: state.current.id, pos: player.getCurrentTime() || 0, dur: player.getDuration() || 0 });
+}, 2000);
+setInterval(overlays, 500);
 
 function songEnded() {
   if (state && state.current) post('/api/next', { id: state.current.id });
 }
 
 window.remote = function (cmd) {
+  if (!state || !state.current) { if (cmd === 'toggleQr') manualQrUntil = 0; return; }
   if (cmd === 'pause') post('/api/pause');
-  else if (cmd === 'skip') songEnded();
-  else if (cmd === 'toggleQr') document.body.classList.toggle('noSide');
+  else if (cmd === 'skip') { flash('⏭ Skipping…'); songEnded(); }
+  else if (cmd === 'restart') post('/api/restart');
+  else if (cmd === 'toggleQr') manualQrUntil = Date.now() < manualQrUntil ? 0 : Date.now() + 30000;
 };
 
 window.onYouTubeIframeAPIReady = function () {
   player = new YT.Player('player', {
     width: '100%', height: '100%',
-    playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3,
-                  origin: location.origin },
+    playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, fs: 0,
+                  disablekb: 1, origin: location.origin },
     events: {
       onReady: () => { playerReady = true; if (state) syncPlayer(state); },
       onStateChange: e => { if (e.data === YT.PlayerState.ENDED) songEnded(); },
-      // 2, 5, 100, 101, 150: bad id, HTML5 error, removed, or the owner blocks playback outside YouTube. Skip it.
+      // 2, 5, 100, 101, 150: bad id, HTML5 error, removed, or blocked outside YouTube. Skip and remember it.
       onError: () => {
         if (state && state.current) post('/api/bad', { videoId: state.current.videoId });
-        showBanner('⚠️ That video can\'t play here, skipping…');
-        setTimeout(songEnded, 3000);
+        flash('⚠️ Can\'t play this one — skipping');
+        setTimeout(songEnded, 2500);
       }
     }
   });
 };
 
-document.querySelectorAll('.qr').forEach(img => img.src = '/qr.png?' + Date.now());
-setInterval(() => document.querySelectorAll('.qr').forEach(img => img.src = '/qr.png?' + Date.now()), 60000);
+function refreshQr() { document.querySelectorAll('.qr').forEach(img => img.src = '/qr.png?' + Date.now()); }
+refreshQr(); setInterval(refreshQr, 60000);
 poll();
 const tag = document.createElement('script');
 tag.src = 'https://www.youtube.com/iframe_api';
