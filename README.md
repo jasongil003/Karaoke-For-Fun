@@ -23,7 +23,7 @@ No accounts, no servers, no app for guests to install: the TV app hosts a small 
 - An "Up next: *name*" pop-up in the last 25 seconds of a song. The full line is only on the phones.
 - A thin progress line along the bottom.
 
-**On the phone:** search with suggestions while typing, recent searches and quick chips, a Share button that
+**On the phone:** search with suggestions while typing, recent searches, a Share button that
 shows the QR code big for friends, add songs, see who's singing and your place in line,
 a progress bar with time left, start over / play-pause / next, volume, move songs up or remove them.
 
