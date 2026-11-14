@@ -7,7 +7,8 @@ No accounts, no servers, no app for guests to install: the TV app hosts a small 
 
 ## How it works
 
-1. Open **Karaoke For Fun** on the TV. It shows a big QR code.
+1. Open **Karaoke For Fun** on the TV. It shows a full-screen QR code (nothing plays by itself; a line saved from
+   last time waits until someone presses OK on the remote or Start on a phone).
 2. Guests scan the QR code with their phone camera (they must be on the same Wi-Fi as the TV).
    The TV finds its own Wi-Fi address and puts it in the QR code, so nobody types an IP address.
 3. They type their name, search for a song, and tap **Add**. Their phone shows their place in line.
@@ -15,12 +16,15 @@ No accounts, no servers, no app for guests to install: the TV app hosts a small 
 
 **On the TV, during a song:**
 - A "Now singing: *name*" banner at the start of each song.
-- A small QR card in the corner for the first 20 seconds of each song and for 20 seconds every 5 minutes
-  (and for the last 90 seconds if nobody is in line). Change these at the top of `tv.html`.
+- A small QR code in the top-right corner for the first 20 seconds of each song and for 20 seconds every
+  5 minutes (and for the last 90 seconds if nobody is in line). Change these at the top of `tv.html`.
+- A "Great job!" screen over the last 12 seconds of each video, so YouTube's end-screen suggestions never show.
+- A full-screen QR code whenever nobody is singing.
 - An "Up next: *name*" pop-up in the last 25 seconds of a song. The full line is only on the phones.
 - A thin progress line along the bottom.
 
-**On the phone:** search with quick suggestion chips, add songs, see who's singing and your place in line,
+**On the phone:** search with suggestions while typing, recent searches and quick chips, a Share button that
+shows the QR code big for friends, add songs, see who's singing and your place in line,
 a progress bar with time left, start over / play-pause / next, volume, move songs up or remove them.
 
 **On the TV remote:** OK = pause/play · Right = next song · Left = start over · Up/Down = show/hide the QR card.
