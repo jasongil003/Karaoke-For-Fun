@@ -52,6 +52,8 @@
   .tbtn.big { width:72px; height:72px; background:#fff; color:#1a0d1a; box-shadow:0 8px 24px rgba(255,61,127,.45); }
   .tbtn.big svg { width:32px; height:32px; }
   .tbtn:active { transform:scale(.92); }
+  .remote-hint { margin-top:12px; font-size:13px; color:#e2dcef; text-align:center; line-height:1.5; }
+  .remote-hint b { color:#fff; }
   .vol { display:flex; align-items:center; gap:10px; margin-top:14px; }
   .vol button { width:40px; height:40px; border-radius:12px; background:rgba(0,0,0,.32); color:#fff; display:grid; place-items:center; flex:none; }
   .vol button svg { width:20px; height:20px; fill:currentColor; }
@@ -439,23 +441,13 @@ function render(st) {
         <div class="track"><div class="fill" id="fill"></div></div>
         <div class="times"><span id="tPos">0:00</span><span id="tDur">–:––</span></div>
       </div>
-      <div class="transport">
-        <button class="tbtn" id="restartBtn" aria-label="Start over">${ICON.restart}</button>
-        <button class="tbtn big" id="pauseBtn" aria-label="${st.paused ? 'Play' : 'Pause'}">${st.paused ? ICON.play : ICON.pause}</button>
-        <button class="tbtn" id="skipBtn" aria-label="Next song">${ICON.next}</button>
-      </div>
+      <div class="remote-hint">📺 Use the TV remote: <b>OK</b> pause/play · <b>▶</b> next song · <b>◀</b> start over</div>
       <div class="vol">
         <button id="volDown" aria-label="Volume down">${ICON.volDown}</button>
         <div class="vtrack"><div class="vfill" style="width:${st.volume}%"></div></div>
         <button id="volUp" aria-label="Volume up">${ICON.volUp}</button>
         <span class="vnum">${st.volume}%</span>
       </div>`;
-    $('pauseBtn').onclick = () => post('/api/pause', { mode: 'toggle', by: (getName() || 'Someone') + '\'s phone' }).then(() => refresh(true));
-    $('restartBtn').onclick = () => post('/api/restart').then(() => { toast('⏮ Starting the song over'); refresh(true); });
-    $('skipBtn').onclick = () => {
-      if (confirm(st.upcoming.length ? `Skip to ${st.upcoming[0].singer}'s song?` : 'Skip this song? (Nobody is next.)'))
-        post('/api/next', { id: c.id }).then(() => refresh(true));
-    };
     $('volDown').onclick = () => post('/api/volume', { delta: -10 }).then(() => refresh(true));
     $('volUp').onclick = () => post('/api/volume', { delta: 10 }).then(() => refresh(true));
     paintProgress();

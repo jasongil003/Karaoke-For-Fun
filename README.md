@@ -25,7 +25,7 @@ No accounts, no servers, no app for guests to install: the TV app hosts a small 
 
 **On the phone:** search with suggestions while typing, recent searches, a Share button that
 shows the QR code big for friends, add songs, see who's singing and your place in line,
-a progress bar with time left, start over / play-pause / next, volume, move songs up or remove them.
+a progress bar with time left, volume, move songs up or remove them. Pause, next and start over are on the TV remote.
 
 **On the TV remote:** OK = pause/play · Right = next song · Left = start over · Up/Down = show/hide the QR card.
 
