@@ -117,7 +117,7 @@
 
 <div id="qrCard"><img class="qr" alt="QR code"></div>
 
-<div id="paused"><div class="ring"><i></i></div><p>Paused</p><small>Press OK on the remote to continue</small></div>
+<div id="paused"><div class="ring"><i></i></div><p>Paused</p><small id="pausedBy"></small><small>Press OK on the remote to continue</small></div>
 <div id="flash" class="glass"></div>
 
 <div id="outro">
@@ -171,6 +171,7 @@ function render(st) {
   $('waiting').innerHTML = waiting
     ? `🎶 <b>${waiting} song${waiting > 1 ? 's' : ''}</b> waiting in line<br><span>Press <b>OK</b> on the remote or <b>Start</b> on a phone to begin</span>` : '';
   document.body.classList.toggle('paused', !!st.paused);
+  $('pausedBy').textContent = st.paused && st.pausedBy ? 'Paused by ' + st.pausedBy : '';
   document.querySelectorAll('.urlText').forEach(el => el.textContent = st.url || 'Connect the TV to Wi-Fi');
   const n = st.upcoming[0];
   if (n) {
@@ -305,10 +306,12 @@ function songEnded() {
   if (state && state.current) post('/api/next', { id: state.current.id });
 }
 
-window.remote = function (cmd) {
-  if (state && state.held) { if (cmd === 'pause') post('/api/start'); return; }
+window.remote = function (cmd, by) {
+  if (state && state.held) { if (cmd === 'pause' || cmd === 'play') post('/api/start'); return; }
   if (!state || !state.current) { if (cmd === 'toggleQr') manualQrUntil = 0; return; }
-  if (cmd === 'pause') post('/api/pause');
+  if (cmd === 'pause') post('/api/pause', { mode: 'toggle', by: by || 'Remote' });
+  else if (cmd === 'play') post('/api/pause', { mode: 'play', by: by || 'Remote' });
+  else if (cmd === 'hold') post('/api/pause', { mode: 'pause', by: by || 'Remote' });
   else if (cmd === 'skip') { flash('⏭ Skipping…'); songEnded(); }
   else if (cmd === 'restart') post('/api/restart');
   else if (cmd === 'toggleQr') manualQrUntil = Date.now() < manualQrUntil ? 0 : Date.now() + 30000;

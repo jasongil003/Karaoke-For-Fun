@@ -430,7 +430,7 @@ function render(st) {
       <div class="top">
         ${c.thumb ? `<img class="art" src="${esc(c.thumb)}" alt="">` : '<div class="art ph">🎤</div>'}
         <div class="info">
-          <div class="label"><span class="live"></span>${st.paused ? 'Paused' : 'Now singing'}</div>
+          <div class="label"><span class="live"></span>${st.paused ? 'Paused' + (st.pausedBy ? ' by ' + esc(st.pausedBy) : '') : 'Now singing'}</div>
           <div class="who">${esc(c.singer)}${mine(c.id) ? ' <span class="you">(you!)</span>' : ''}</div>
           <div class="what">${esc(c.title)}</div>
         </div>
@@ -450,7 +450,7 @@ function render(st) {
         <button id="volUp" aria-label="Volume up">${ICON.volUp}</button>
         <span class="vnum">${st.volume}%</span>
       </div>`;
-    $('pauseBtn').onclick = () => post('/api/pause').then(() => refresh(true));
+    $('pauseBtn').onclick = () => post('/api/pause', { mode: 'toggle', by: (getName() || 'Someone') + '\'s phone' }).then(() => refresh(true));
     $('restartBtn').onclick = () => post('/api/restart').then(() => { toast('⏮ Starting the song over'); refresh(true); });
     $('skipBtn').onclick = () => {
       if (confirm(st.upcoming.length ? `Skip to ${st.upcoming[0].singer}'s song?` : 'Skip this song? (Nobody is next.)'))

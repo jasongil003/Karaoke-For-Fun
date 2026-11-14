@@ -109,9 +109,21 @@ public final class Queue {
         }
     }
 
-    public synchronized void togglePause() {
+    private String pausedBy = "";
+
+    public synchronized void togglePause(String by) {
         if (held) { start(); return; }
-        if (current != null) { paused = !paused; changed(); }
+        if (current != null) setPaused(!paused, by);
+    }
+
+    /** Sets pause on or off (never toggles), remembering who did it so the phones can show it. */
+    public synchronized void setPaused(boolean p, String by) {
+        if (current == null || held) { if (!p && held) start(); return; }
+        if (paused == p) return;
+        paused = p;
+        pausedBy = p ? (by == null || by.isEmpty() ? "someone" : by) : "";
+        android.util.Log.i("KaraokeForFun", (p ? "paused" : "resumed") + " by " + by);
+        changed();
     }
 
     /** Starts a line that was held at startup. */
@@ -138,6 +150,7 @@ public final class Queue {
                     .put("version", version)
                     .put("paused", paused)
                     .put("held", held)
+                    .put("pausedBy", pausedBy)
                     .put("volume", volume)
                     .put("restartSeq", restartSeq)
                     .put("position", position)

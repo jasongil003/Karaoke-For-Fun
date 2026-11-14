@@ -187,7 +187,13 @@ public final class WebServer {
             case "/api/next": queue.next(b.optLong("id")); break;
             case "/api/remove": queue.remove(b.optLong("id")); break;
             case "/api/up": queue.moveUp(b.optLong("id")); break;
-            case "/api/pause": queue.togglePause(); break;
+            case "/api/pause": {   // mode: toggle (default), play, pause
+                String mode = b.optString("mode", "toggle"), by = clip(b.optString("by"), 40);
+                if ("play".equals(mode)) queue.setPaused(false, by);
+                else if ("pause".equals(mode)) queue.setPaused(true, by);
+                else queue.togglePause(by);
+                break;
+            }
             case "/api/restart": queue.restart(); break;
             case "/api/start": queue.start(); break;
             case "/api/volume":
