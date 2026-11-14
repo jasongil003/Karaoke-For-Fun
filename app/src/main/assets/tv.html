@@ -9,10 +9,14 @@
   * { box-sizing:border-box; margin:0; padding:0; }
   html,body { width:100%; height:100%; background:#000; color:var(--text); overflow:hidden;
     font-family:"Roboto", system-ui, sans-serif; }
-  #player { position:absolute; inset:0; width:100%; height:100%; border:0; }
+  /* The player is laid out at 1280x720 device pixels and scaled up, so YouTube streams and decodes 720p:
+     about half the work of 1080p for this TV's processor, and it looks nearly the same from the sofa. */
+  #playerBox { position:absolute; left:0; top:0; transform-origin:0 0; }
+  #playerBox .pl, #playerBox iframe { position:absolute; left:0; top:0; width:100%; height:100%; border:0; display:block; }
+  #playerBox .standby { visibility:hidden; }   /* the second player, quietly loading the next song */
 
-  .glass { background:rgba(12,10,20,.78); border:1px solid rgba(255,255,255,.12); border-radius:22px;
-    box-shadow:0 18px 50px rgba(0,0,0,.55); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+  .glass { background:rgba(14,12,22,.93); border:1px solid rgba(255,255,255,.12); border-radius:22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5); }
 
   /* Idle: nobody singing */
   #idle { position:absolute; inset:0; display:none; align-items:center; justify-content:center; gap:80px; z-index:4;
@@ -82,6 +86,10 @@
   .confetti { position:absolute; top:-20px; width:12px; height:18px; border-radius:3px; opacity:.9; animation:fall linear forwards; }
   @keyframes fall { to { transform:translateY(115vh) rotate(720deg); } }
 
+  /* Overlays that aren't showing are hidden, so the TV doesn't keep compositing them over the video. */
+  #qrCard, #banner, #upnext, #outro, #flash { visibility:hidden; }
+  #qrCard.show, #banner.show, #upnext.show, #outro.show, #flash.show { visibility:visible; }
+
   /* Quick action feedback */
   #flash { position:absolute; left:50%; top:50%; z-index:7; transform:translate(-50%,-50%) scale(.8); opacity:0; pointer-events:none;
     padding:22px 40px; font-size:34px; font-weight:800; transition:transform .25s, opacity .25s; }
@@ -89,12 +97,12 @@
 
   /* Thin progress line along the bottom */
   #bar { position:absolute; left:0; bottom:0; height:5px; z-index:6; background:linear-gradient(90deg, var(--pink), var(--orange));
-    width:0; transition:width 1s linear; }
+    width:100%; transform-origin:0 50%; transform:scaleX(0); }
   body.idle #bar { display:none; }
 </style>
 </head>
 <body class="idle">
-<div id="player"></div>
+<div id="playerBox"><div class="pl" id="playerA"></div><div class="pl" id="playerB"></div></div>
 <div id="bar"></div>
 
 <div id="idle">
@@ -141,7 +149,11 @@ const END_EARLY_SEC = 12;      // finish this many seconds before the video ends
                                // suggestions never show (it's usually just the instrumental outro)
 const OUTRO_SEC = 5;           // how long the "Great job!" screen stays while the music fades
 
-let player = null, playerReady = false, loadedSongId = 0, lastVersion = 0, state = null;
+// Two players: the active one plays; the other loads the next song during the "Great job!" screen, so the
+// next song starts instantly. `player` always points at the active one.
+let players = [null, null], ready = [false, false], active = 0, player = null, playerReady = false;
+let preloaded = { songId: 0, idx: -1, ready: false };
+let loadedSongId = 0, lastVersion = 0, state = null;
 let seenRestart = null, appliedVolume = null, songStartedAt = 0, manualQrUntil = 0;
 let outroFor = 0, outroTimer = null, fadeTimer = null;
 const $ = id => document.getElementById(id);
@@ -182,12 +194,46 @@ function render(st) {
   }
 }
 
+function playSong(cur, vol) {
+  const o = 1 - active;
+  if (preloaded.songId === cur.id && preloaded.idx === o && ready[o]) {
+    // The next song is already loaded in the standby player: swap them.
+    const old = player;
+    old.stopVideo();
+    old.getIframe().classList.add('standby');
+    active = o; player = players[o];
+    player.getIframe().classList.remove('standby');
+    player.unMute(); player.setVolume(vol); appliedVolume = vol;
+    player.seekTo(0, true); player.playVideo();
+    console.log('karaoke: started preloaded song ' + cur.id + (preloaded.ready ? ' (buffered)' : ' (still loading)'));
+  } else {
+    dropPreload();
+    player.unMute();
+    player.loadVideoById(cur.videoId);
+  }
+  preloaded = { songId: 0, idx: -1, ready: false };
+}
+
+function preloadNext(n) {
+  const o = 1 - active;
+  if (!n || !ready[o] || preloaded.songId === n.id) return;
+  preloaded = { songId: n.id, idx: o, ready: false };
+  players[o].mute();
+  players[o].loadVideoById(n.videoId);   // paused at the start as soon as it begins (onStateChange)
+}
+
+function dropPreload() {
+  if (preloaded.idx >= 0 && players[preloaded.idx] && preloaded.idx !== active) players[preloaded.idx].stopVideo();
+  preloaded = { songId: 0, idx: -1, ready: false };
+}
+
 function syncPlayer(st) {
   if (!playerReady) return;
   if (appliedVolume !== st.volume && !outroFor) { player.setVolume(st.volume); appliedVolume = st.volume; }
   const cur = st.held ? null : st.current;   // a held line (after startup) doesn't play yet
   if (!cur) {
     if (loadedSongId) { player.stopVideo(); loadedSongId = 0; }
+    dropPreload();
     return;
   }
   if (cur.id !== loadedSongId) {
@@ -195,7 +241,7 @@ function syncPlayer(st) {
     loadedSongId = cur.id;
     seenRestart = st.restartSeq;
     songStartedAt = Date.now();
-    player.loadVideoById(cur.videoId);
+    playSong(cur, st.volume);
     showBanner(cur.singer);
     return;
   }
@@ -229,7 +275,7 @@ function overlays() {
     if (left <= EMPTY_LINE_SEC && !st.upcoming.length) {
       showQr = true; head = 'Nobody is next!'; sub = 'Scan now to sing the next song';
     }
-    $('bar').style.width = dur > 0 ? (100 * pos / dur).toFixed(2) + '%' : '0';
+    $('bar').style.transform = 'scaleX(' + (dur > 0 ? (pos / dur).toFixed(4) : 0) + ')';
   }
   if (Date.now() < manualQrUntil) showQr = true;
   if (st && st.paused) showQr = true;
@@ -252,7 +298,7 @@ setInterval(() => {
   if (!playerReady || !state || !state.current) return;
   post('/api/progress', { id: state.current.id, pos: player.getCurrentTime() || 0, dur: player.getDuration() || 0 });
 }, 2000);
-setInterval(overlays, 500);
+setInterval(overlays, 1000);
 
 // Cover the last seconds with our own "Great job!" screen, fade the music out, then go to the next song.
 function startOutro(st) {
@@ -273,6 +319,7 @@ function startOutro(st) {
     if (i >= steps) clearInterval(fadeTimer);
   }, (OUTRO_SEC * 1000 - 600) / steps);
   appliedVolume = null;   // the next song puts the real volume back
+  if (n) preloadNext(n);  // the video is covered now, so load the next song in the second player
   clearTimeout(outroTimer);
   outroTimer = setTimeout(() => {
     if (state && state.current && state.current.id === cur.id) post('/api/next', { id: cur.id });
@@ -317,22 +364,46 @@ window.remote = function (cmd, by) {
   else if (cmd === 'toggleQr') manualQrUntil = Date.now() < manualQrUntil ? 0 : Date.now() + 30000;
 };
 
-window.onYouTubeIframeAPIReady = function () {
-  player = new YT.Player('player', {
+function sizePlayer() {
+  const dpr = window.devicePixelRatio || 1, w = 1280 / dpr, h = 720 / dpr, k = window.innerWidth / w;
+  const box = $('playerBox');
+  box.style.width = w + 'px'; box.style.height = h + 'px'; box.style.transform = 'scale(' + k + ')';
+}
+sizePlayer();
+window.addEventListener('resize', sizePlayer);
+
+function makePlayer(idx, el) {
+  players[idx] = new YT.Player(el, {
     width: '100%', height: '100%',
     playerVars: { autoplay: 1, controls: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, fs: 0,
                   disablekb: 1, origin: location.origin },
     events: {
-      onReady: () => { playerReady = true; if (state) syncPlayer(state); },
-      onStateChange: e => { if (e.data === YT.PlayerState.ENDED) songEnded(); },
+      onReady: () => {
+        ready[idx] = true;
+        if (idx !== active) players[idx].getIframe().classList.add('standby');
+        if (idx === active) { player = players[idx]; playerReady = true; if (state) syncPlayer(state); }
+      },
+      onStateChange: e => {
+        if (idx === active) { if (e.data === YT.PlayerState.ENDED) songEnded(); return; }
+        // Standby player: as soon as the next song starts, hold it at the beginning, muted, still buffering.
+        if (preloaded.idx === idx && e.data === YT.PlayerState.PLAYING) {
+          players[idx].pauseVideo(); players[idx].seekTo(0, true); preloaded.ready = true;
+        }
+      },
       // 2, 5, 100, 101, 150: bad id, HTML5 error, removed, or blocked outside YouTube. Skip and remember it.
       onError: () => {
+        if (idx !== active) { preloaded = { songId: 0, idx: -1, ready: false }; return; }  // it'll be skipped when its turn comes
         if (state && state.current) post('/api/bad', { videoId: state.current.videoId });
         flash('⚠️ Can\'t play this one — skipping');
         setTimeout(songEnded, 2500);
       }
     }
   });
+}
+
+window.onYouTubeIframeAPIReady = function () {
+  makePlayer(0, 'playerA');
+  makePlayer(1, 'playerB');
 };
 
 function refreshQr() { document.querySelectorAll('.qr').forEach(img => img.src = '/qr.png?' + Date.now()); }

@@ -20,6 +20,9 @@ No accounts, no servers, no app for guests to install: the TV app hosts a small 
   5 minutes (and for the last 90 seconds if nobody is in line). Change these at the top of `tv.html`.
 - A "Great job!" screen over the last 12 seconds of each video, so YouTube's end-screen suggestions never show.
 - A full-screen QR code whenever nobody is singing.
+- Video plays at 720p (the player is sized to 1280x720 and scaled up), which keeps a Chromecast's processor
+  from stalling. During the "Great job!" screen a second, hidden player loads the next song, so it starts
+  instantly. Videos are never downloaded or saved; YouTube's terms don't allow that.
 - An "Up next: *name*" pop-up in the last 25 seconds of a song. The full line is only on the phones.
 - A thin progress line along the bottom.
 
