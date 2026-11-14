@@ -1,0 +1,51 @@
+plugins { id 'com.android.application' }
+
+// The YouTube Data API key is never stored in this repository. It is read, in order, from:
+//   1. the YT_API_KEY environment variable
+//   2. youtube.apiKey=... in local.properties (git-ignored)
+//   3. a youtube-api-key.txt file next to settings.gradle (git-ignored)
+def ytKey = System.getenv('YT_API_KEY') ?: ''
+if (!ytKey) {
+    def lp = rootProject.file('local.properties')
+    if (lp.exists()) {
+        def props = new Properties()
+        lp.withInputStream { props.load(it) }
+        ytKey = props.getProperty('youtube.apiKey', '')
+    }
+}
+if (!ytKey) {
+    def f = rootProject.file('youtube-api-key.txt')
+    if (f.exists()) ytKey = f.text.trim()
+}
+ytKey = ytKey.trim()
+if (!ytKey) {
+    logger.warn('WARNING: no YouTube API key found (see README). The app will build, but song search will not work.')
+}
+
+android {
+    namespace 'com.videokenight.app'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.videokenight.app'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+        buildConfigField 'String', 'YT_KEY', "\"${ytKey}\""
+    }
+    buildFeatures { buildConfig true }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.debug
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.zxing:core:3.5.3'
+}

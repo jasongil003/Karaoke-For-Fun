@@ -1,0 +1,344 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b14">
+<title>Videoke Night</title>
+<style>
+  :root {
+    --bg:#0d0b14; --card:#17141f; --card2:#1f1b2a; --line:#2c2740; --muted:#9b96b0; --text:#f6f4fb;
+    --pink:#ff3d7f; --orange:#ffa94d; --ok:#3ddc97; --radius:16px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html { background:var(--bg); }
+  body {
+    color:var(--text); font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, Roboto, sans-serif;
+    min-height:100vh; max-width:600px; margin:0 auto;
+    padding:0 16px calc(96px + env(safe-area-inset-bottom));
+    background:
+      radial-gradient(600px 300px at 0% -10%, rgba(255,61,127,.22), transparent 70%),
+      radial-gradient(500px 300px at 110% 0%, rgba(255,169,77,.14), transparent 70%), var(--bg);
+    background-attachment:fixed;
+  }
+  button { font:inherit; cursor:pointer; border:0; }
+  input { font:inherit; }
+
+  /* Header */
+  header { display:flex; align-items:center; justify-content:space-between; padding:calc(14px + env(safe-area-inset-top)) 0 12px; }
+  .brand { display:flex; align-items:center; gap:10px; font-size:21px; font-weight:800; letter-spacing:-.2px; }
+  .brand .logo { width:38px; height:38px; border-radius:12px; display:grid; place-items:center; font-size:20px;
+    background:linear-gradient(135deg, var(--pink), var(--orange)); box-shadow:0 6px 18px rgba(255,61,127,.35); }
+  .brand span { color:var(--pink); }
+  .chip-me { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); color:var(--text);
+    border-radius:999px; padding:6px 12px 6px 6px; font-size:14px; font-weight:600; max-width:44%; }
+  .chip-me .av { width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:13px; font-weight:800;
+    background:linear-gradient(135deg, var(--pink), var(--orange)); flex:none; }
+  .chip-me .nm { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  /* Now singing */
+  .now { position:relative; overflow:hidden; border-radius:20px; padding:14px; display:flex; gap:14px; align-items:center;
+    background:linear-gradient(135deg, rgba(255,61,127,.28), rgba(255,169,77,.16)); border:1px solid rgba(255,61,127,.35); }
+  .now .art { width:86px; height:86px; border-radius:14px; object-fit:cover; flex:none; background:#000; }
+  .now .art.ph { display:grid; place-items:center; font-size:38px; background:rgba(0,0,0,.35); }
+  .now .info { flex:1; min-width:0; }
+  .label { font-size:11px; letter-spacing:1.6px; text-transform:uppercase; color:#ffd1e1; font-weight:700; display:flex; align-items:center; gap:6px; }
+  .live { width:8px; height:8px; border-radius:50%; background:var(--pink); box-shadow:0 0 0 0 rgba(255,61,127,.7); animation:pulse 1.6s infinite; }
+  @keyframes pulse { 70% { box-shadow:0 0 0 8px rgba(255,61,127,0); } 100% { box-shadow:0 0 0 0 rgba(255,61,127,0); } }
+  .now .who { font-size:20px; font-weight:800; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .now .what { font-size:13px; color:#e9e4f2; margin-top:2px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .now .ctrls { display:flex; gap:8px; margin-top:10px; }
+  .now .ctrls button { flex:1; padding:9px 0; border-radius:12px; background:rgba(0,0,0,.35); color:var(--text); font-weight:700; font-size:14px; }
+  .now.idle { justify-content:center; text-align:center; padding:22px 14px; }
+
+  /* My turn banner */
+  .myturn { margin-top:10px; border-radius:14px; padding:12px 14px; background:rgba(61,220,151,.12); border:1px solid rgba(61,220,151,.35);
+    color:var(--ok); font-weight:700; font-size:15px; display:none; }
+  .myturn.show { display:block; }
+
+  /* Segmented tabs */
+  .tabs { display:flex; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:4px; margin:16px 0 4px; }
+  .tabs button { flex:1; padding:11px 0; border-radius:10px; background:none; color:var(--muted); font-weight:700; font-size:15px; }
+  .tabs button.on { background:var(--card2); color:var(--text); box-shadow:0 2px 10px rgba(0,0,0,.35); }
+  .badge { display:inline-block; min-width:20px; padding:1px 6px; margin-left:4px; border-radius:999px; background:var(--pink); color:#fff; font-size:12px; }
+
+  /* Search bar */
+  .searchbar { position:sticky; top:0; z-index:3; padding:12px 0 10px; background:linear-gradient(var(--bg) 80%, transparent); }
+  .field { display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:4px 4px 4px 14px; }
+  .field:focus-within { border-color:var(--pink); box-shadow:0 0 0 3px rgba(255,61,127,.18); }
+  .field input { flex:1; min-width:0; background:none; border:0; outline:0; color:var(--text); font-size:17px; padding:10px 0; }
+  .field input::-webkit-search-cancel-button { display:none; }
+  .field .go { background:var(--pink); color:#fff; font-weight:800; padding:11px 16px; border-radius:11px; font-size:15px; }
+  .chips { display:flex; gap:8px; overflow-x:auto; padding:10px 0 2px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar { display:none; }
+  .chips button { flex:none; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:999px; padding:8px 14px; font-size:14px; font-weight:600; }
+
+  /* Lists */
+  .list { display:flex; flex-direction:column; gap:10px; margin-top:6px; }
+  .row { display:flex; gap:12px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:10px; }
+  .row img { width:104px; height:58px; border-radius:10px; object-fit:cover; flex:none; background:#000; }
+  .row .t { flex:1; min-width:0; }
+  .row .t b { font-size:14.5px; line-height:1.3; font-weight:650; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .row .t small { display:block; margin-top:3px; color:var(--muted); font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .add { flex:none; background:var(--pink); color:#fff; font-weight:800; font-size:14px; padding:10px 14px; border-radius:12px; min-width:66px; }
+  .add.done { background:rgba(61,220,151,.15); color:var(--ok); }
+  .add:disabled { opacity:.8; }
+  .pos { flex:none; width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:var(--card2); font-weight:800; font-size:14px; color:var(--muted); }
+  .row.mine { border-color:rgba(61,220,151,.5); background:linear-gradient(90deg, rgba(61,220,151,.08), var(--card) 60%); }
+  .row.mine .pos { background:var(--ok); color:#06301f; }
+  .row .acts { display:flex; flex-direction:column; gap:6px; flex:none; }
+  .icon { width:34px; height:34px; border-radius:10px; background:var(--card2); color:var(--text); font-size:15px; display:grid; place-items:center; }
+  .you { color:var(--ok); font-weight:700; }
+
+  .empty { text-align:center; color:var(--muted); padding:34px 16px; font-size:15px; line-height:1.55; }
+  .empty .big { font-size:40px; display:block; margin-bottom:8px; }
+  .skeleton { height:80px; border-radius:var(--radius); background:linear-gradient(90deg, var(--card) 0%, var(--card2) 50%, var(--card) 100%);
+    background-size:200% 100%; animation:shine 1.2s infinite linear; }
+  @keyframes shine { to { background-position:-200% 0; } }
+
+  /* Toast */
+  #toast { position:fixed; left:50%; bottom:calc(22px + env(safe-area-inset-bottom)); transform:translate(-50%, 180%); max-width:92vw;
+    background:var(--ok); color:#06301f; font-weight:800; padding:14px 22px; border-radius:999px; transition:transform .35s cubic-bezier(.2,.9,.3,1.2);
+    z-index:20; white-space:nowrap; box-shadow:0 10px 30px rgba(0,0,0,.45); }
+  #toast.show { transform:translate(-50%, 0); }
+  #toast.err { background:#ff6b6b; color:#fff; }
+
+  /* Name sheet */
+  #sheet { position:fixed; inset:0; z-index:30; display:none; align-items:flex-end; justify-content:center; background:rgba(5,4,10,.72);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  #sheet.open { display:flex; }
+  .sheet { width:100%; max-width:600px; background:var(--card); border-top:1px solid var(--line); border-radius:24px 24px 0 0;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom)); animation:up .3s cubic-bezier(.2,.9,.3,1); }
+  @keyframes up { from { transform:translateY(100%); } }
+  .sheet .grab { width:44px; height:5px; border-radius:3px; background:var(--line); margin:-8px auto 16px; }
+  .sheet h2 { font-size:22px; font-weight:800; }
+  .sheet p { color:var(--muted); font-size:14.5px; margin:6px 0 16px; }
+  .sheet input { width:100%; font-size:18px; padding:15px 16px; border-radius:14px; border:1px solid var(--line); background:var(--bg); color:var(--text); outline:0; }
+  .sheet input:focus { border-color:var(--pink); box-shadow:0 0 0 3px rgba(255,61,127,.18); }
+  .sheet .primary { width:100%; margin-top:12px; padding:15px; border-radius:14px; background:linear-gradient(135deg, var(--pink), #ff6a5c); color:#fff; font-weight:800; font-size:17px; }
+  .sheet .primary:disabled { opacity:.45; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">🎤</div><div>Videoke <span>Night</span></div></div>
+  <button class="chip-me" id="meBtn"><span class="av" id="meAv">?</span><span class="nm" id="meName">Set name</span></button>
+</header>
+
+<div id="now"></div>
+<div class="myturn" id="myturn"></div>
+
+<div class="tabs">
+  <button id="tabSearch" class="on">🔍 Pick a song</button>
+  <button id="tabQueue">🎶 Line<span id="count"></span></button>
+</div>
+
+<section id="searchView">
+  <div class="searchbar">
+    <form id="searchForm" class="field" autocomplete="off">
+      <input id="q" type="search" placeholder="Song title or singer…" enterkeyhint="search">
+      <button class="go">Search</button>
+    </form>
+    <div class="chips" id="chips"></div>
+  </div>
+  <div class="list" id="results">
+    <div class="empty"><span class="big">🎵</span>Search a song or singer, then tap <b>Add</b>.<br>We'll find the karaoke version for you.</div>
+  </div>
+</section>
+
+<section id="queueView" hidden>
+  <div class="list" id="queue"></div>
+</section>
+
+<div id="sheet">
+  <form class="sheet" id="nameForm" autocomplete="off">
+    <div class="grab"></div>
+    <h2>What's your name? 🎤</h2>
+    <p>It shows on the TV when it's your turn to sing.</p>
+    <input id="nameInput" maxlength="30" placeholder="e.g. Tita Lorna" autocapitalize="words" enterkeyhint="done">
+    <button class="primary" id="nameSave" disabled>Let's sing!</button>
+  </form>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUGGEST = ['OPM classics', 'Air Supply', 'Regine Velasquez', 'Eraserheads', 'Sharon Cuneta', 'Bee Gees',
+                 'ABBA', 'Whitney Houston', 'Westlife', 'Moira Dela Torre', 'Frank Sinatra', 'Dan Fogelberg'];
+let state = null, lastVersion = 0, myIds = loadIds(), lastResults = [];
+
+const $ = id => document.getElementById(id);
+function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function getName() { try { return localStorage.getItem('vk_name') || ''; } catch (e) { return window._name || ''; } }
+function setName(n) { try { localStorage.setItem('vk_name', n); } catch (e) { window._name = n; } }
+function loadIds() { try { return JSON.parse(localStorage.getItem('vk_ids') || '[]'); } catch (e) { return []; } }
+function saveIds() { try { localStorage.setItem('vk_ids', JSON.stringify(myIds.slice(-50))); } catch (e) { } }
+const mine = id => myIds.includes(id);
+
+function toast(text, err) {
+  const t = $('toast');
+  t.textContent = text; t.classList.toggle('err', !!err); t.classList.add('show');
+  clearTimeout(toast.timer); toast.timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+async function post(path, body) {
+  try {
+    const r = await fetch(path, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body || {}) });
+    return await r.json();
+  } catch (e) { toast('Lost connection to the TV', true); return null; }
+}
+
+/* ---- Name sheet ---- */
+function paintMe() {
+  const n = getName();
+  $('meName').textContent = n || 'Set name';
+  $('meAv').textContent = n ? n.trim()[0].toUpperCase() : '?';
+}
+function openSheet() {
+  $('nameInput').value = getName();
+  $('nameSave').disabled = !getName();
+  $('sheet').classList.add('open');
+  setTimeout(() => $('nameInput').focus(), 250);
+}
+function closeSheet() { $('sheet').classList.remove('open'); }
+$('nameInput').addEventListener('input', e => $('nameSave').disabled = !e.target.value.trim());
+$('nameForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = $('nameInput').value.trim();
+  if (!n) return;
+  setName(n); paintMe(); closeSheet();
+  if (pendingAdd) { const p = pendingAdd; pendingAdd = null; addSong(p.i, p.btn); }
+});
+$('sheet').addEventListener('click', e => { if (e.target.id === 'sheet' && getName()) closeSheet(); });
+$('meBtn').onclick = openSheet;
+
+/* ---- Tabs ---- */
+function showTab(which) {
+  $('searchView').hidden = which !== 'search';
+  $('queueView').hidden = which !== 'queue';
+  $('tabSearch').classList.toggle('on', which === 'search');
+  $('tabQueue').classList.toggle('on', which === 'queue');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('tabSearch').onclick = () => showTab('search');
+$('tabQueue').onclick = () => showTab('queue');
+
+/* ---- Search ---- */
+$('chips').innerHTML = SUGGEST.map(s => `<button type="button">${esc(s)}</button>`).join('');
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('q').value = b.textContent; search();
+});
+$('searchForm').addEventListener('submit', e => { e.preventDefault(); search(); });
+
+async function search() {
+  const q = $('q').value.trim();
+  if (!q) return;
+  $('q').blur();
+  const box = $('results');
+  box.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+  try {
+    const res = await (await fetch('/api/search?q=' + encodeURIComponent(q))).json();
+    if (res.error) { box.innerHTML = `<div class="empty"><span class="big">😴</span>${esc(res.error)}</div>`; return; }
+    lastResults = res.items || [];
+    const queued = new Set([state && state.current ? state.current.videoId : '', ...(state ? state.upcoming.map(s => s.videoId) : [])]);
+    box.innerHTML = lastResults.length ? lastResults.map((it, i) => `
+      <div class="row">
+        <img src="${esc(it.thumb)}" alt="" loading="lazy">
+        <div class="t"><b>${esc(it.title)}</b><small>${esc(it.channel)}${queued.has(it.videoId) ? ' · <span class="you">in line</span>' : ''}</small></div>
+        <button class="add" data-i="${i}">+ Add</button>
+      </div>`).join('')
+      : '<div class="empty"><span class="big">🔎</span>No karaoke versions found.<br>Try another spelling or the singer\'s name.</div>';
+  } catch (err) {
+    box.innerHTML = '<div class="empty"><span class="big">📶</span>Can\'t reach the TV.<br>Make sure you\'re on the home Wi-Fi.</div>';
+  }
+}
+
+let pendingAdd = null;
+$('results').addEventListener('click', e => {
+  const b = e.target.closest('button[data-i]');
+  if (!b || b.classList.contains('done')) return;
+  if (!getName()) { pendingAdd = { i: +b.dataset.i, btn: b }; openSheet(); return; }
+  addSong(+b.dataset.i, b);
+});
+
+async function addSong(i, b) {
+  const it = lastResults[i];
+  b.disabled = true; b.textContent = '…';
+  const r = await post('/api/add', { videoId: it.videoId, title: it.title, thumb: it.thumb, singer: getName() });
+  if (r && r.ok) {
+    myIds.push(r.id); saveIds();
+    b.disabled = false; b.classList.add('done'); b.textContent = '✓ Added';
+    if (navigator.vibrate) navigator.vibrate(30);
+    await refresh(true);
+    const pos = state && state.current && state.current.id === r.id ? 0 : (state ? state.upcoming.findIndex(s => s.id === r.id) + 1 : 0);
+    toast(pos === 0 ? '🎤 You\'re up now — grab the mic!' : `🎉 Added! You're #${pos} in line`);
+  } else { b.disabled = false; b.textContent = '+ Add'; toast('Couldn\'t add that song', true); }
+}
+
+/* ---- Rendering ---- */
+function render(st) {
+  const now = $('now');
+  if (st.current) {
+    const c = st.current;
+    now.className = 'now';
+    now.innerHTML = `
+      ${c.thumb ? `<img class="art" src="${esc(c.thumb)}" alt="">` : '<div class="art ph">🎤</div>'}
+      <div class="info">
+        <div class="label"><span class="live"></span>${st.paused ? 'Paused' : 'Now singing'}</div>
+        <div class="who">${esc(c.singer)}${mine(c.id) ? ' <span class="you">(you!)</span>' : ''}</div>
+        <div class="what">${esc(c.title)}</div>
+        <div class="ctrls">
+          <button id="pauseBtn">${st.paused ? '▶ Play' : '⏸ Pause'}</button>
+          <button id="skipBtn">⏭ Skip</button>
+        </div>
+      </div>`;
+    $('pauseBtn').onclick = () => post('/api/pause').then(() => refresh(true));
+    $('skipBtn').onclick = () => { if (confirm('Skip this song?')) post('/api/next', { id: c.id }).then(() => refresh(true)); };
+  } else {
+    now.className = 'now idle';
+    now.innerHTML = '<div><div class="label" style="justify-content:center">Stage is open</div><div class="who" style="white-space:normal">Nobody\'s singing — be the first! 🎶</div></div>';
+  }
+
+  // My turn
+  const myNext = st.upcoming.findIndex(s => mine(s.id));
+  const mt = $('myturn');
+  if (st.current && mine(st.current.id)) { mt.textContent = '🎤 It\'s your turn — sing your heart out!'; mt.classList.add('show'); }
+  else if (myNext === 0) { mt.textContent = '⏳ You\'re next! Get ready.'; mt.classList.add('show'); }
+  else if (myNext > 0) { mt.textContent = `🎟 You're #${myNext + 1} in line.`; mt.classList.add('show'); }
+  else mt.classList.remove('show');
+
+  $('count').innerHTML = st.upcoming.length ? `<span class="badge">${st.upcoming.length}</span>` : '';
+  $('queue').innerHTML = st.upcoming.length ? st.upcoming.map((s, i) => `
+    <div class="row ${mine(s.id) ? 'mine' : ''}">
+      <div class="pos">${i + 1}</div>
+      <img src="${esc(s.thumb)}" alt="" loading="lazy">
+      <div class="t"><b>${esc(s.title)}</b><small>🎤 ${esc(s.singer)}${mine(s.id) ? ' · <span class="you">you</span>' : ''}</small></div>
+      <div class="acts">
+        ${i > 0 ? `<button class="icon" data-up="${s.id}" aria-label="Move up">↑</button>` : ''}
+        <button class="icon" data-rm="${s.id}" aria-label="Remove">✕</button>
+      </div>
+    </div>`).join('')
+    : '<div class="empty"><span class="big">🎶</span>The line is empty.<br>Pick a song and you\'ll be first!</div>';
+}
+
+$('queue').addEventListener('click', e => {
+  const up = e.target.closest('[data-up]'), rm = e.target.closest('[data-rm]');
+  if (up) post('/api/up', { id: +up.dataset.up }).then(() => refresh(true));
+  if (rm && confirm('Remove this song from the line?')) post('/api/remove', { id: +rm.dataset.rm }).then(() => refresh(true));
+});
+
+async function refresh(force) {
+  try {
+    const st = await (await fetch('/api/state')).json();
+    state = st;
+    if (force || st.version !== lastVersion) { lastVersion = st.version; render(st); }
+  } catch (e) { }
+}
+
+paintMe();
+if (!getName()) openSheet();
+refresh(true);
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

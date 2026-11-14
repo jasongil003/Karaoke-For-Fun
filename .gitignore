@@ -1,0 +1,17 @@
+# Secrets: never commit your YouTube API key
+youtube-api-key.txt
+local.properties
+.env
+
+# Build output (BuildConfig inside it contains the key)
+build/
+app/build/
+.gradle/
+*.apk
+*.aab
+
+# IDE / OS
+.idea/
+*.iml
+.DS_Store
+captures/
