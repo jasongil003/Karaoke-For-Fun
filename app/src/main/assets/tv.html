@@ -18,6 +18,8 @@
   #idle { position:absolute; inset:0; display:none; align-items:center; justify-content:center; gap:80px; z-index:4;
     background:radial-gradient(circle at 25% 30%, #3a0f2e 0%, var(--bg) 60%); }
   body.idle #idle { display:flex; }
+  #waiting { display:none; margin-top:26px; padding:16px 22px; font-size:24px; line-height:1.45; border-color:rgba(255,61,127,.5); }
+  #waiting span { font-size:19px; color:var(--muted); }
   #idle h1 { font-size:66px; font-weight:900; line-height:1.02; letter-spacing:-1px; }
   #idle h1 span { background:linear-gradient(90deg, var(--pink), var(--orange)); -webkit-background-clip:text; color:transparent; }
   #idle p { font-size:26px; color:#d9d4e6; margin-top:20px; line-height:1.4; }
@@ -27,15 +29,12 @@
   .qrimg img { display:block; }
   #idle .qrimg img { width:330px; height:330px; }
 
-  /* Corner QR card, shown on a schedule */
-  #qrCard { position:absolute; right:32px; bottom:32px; z-index:6; display:flex; align-items:center; gap:18px; padding:16px 22px 16px 16px;
-    transform:translateX(130%); transition:transform .6s cubic-bezier(.2,.9,.3,1.1); }
-  #qrCard.show { transform:none; }
-  #qrCard .qrimg { padding:8px; border-radius:12px; }
-  #qrCard .qrimg img { width:140px; height:140px; }
-  #qrCard b { display:block; font-size:24px; font-weight:800; }
-  #qrCard small { display:block; font-size:16px; color:var(--muted); margin-top:6px; max-width:240px; line-height:1.35; }
-  #qrCard .u { color:var(--orange); font-size:15px; margin-top:8px; }
+  /* Small QR only, top-right corner, shown on a schedule (kept away from the lyrics) */
+  #qrCard { position:absolute; right:22px; top:22px; z-index:6; padding:6px; border-radius:10px; background:#fff;
+    box-shadow:0 6px 20px rgba(0,0,0,.5); opacity:0; transform:scale(.6); transform-origin:top right;
+    transition:opacity .5s, transform .5s cubic-bezier(.2,.9,.3,1.2); }
+  #qrCard.show { opacity:1; transform:none; }
+  #qrCard img { display:block; width:96px; height:96px; }
 
   /* Now singing banner */
   #banner { position:absolute; left:50%; top:36px; z-index:6; padding:16px 34px; display:flex; align-items:center; gap:14px;
@@ -65,6 +64,24 @@
   #paused .ring i { display:flex; gap:20px; } #paused .ring i::before, #paused .ring i::after { content:""; width:22px; height:66px; border-radius:6px; background:#fff; }
   #paused p { font-size:26px; font-weight:700; } #paused small { font-size:18px; color:var(--muted); }
 
+  /* "Great job!" outro: fully covers the video's last seconds (and YouTube's end-screen suggestions) */
+  #outro { position:absolute; inset:0; z-index:8; display:flex; align-items:center; justify-content:center; flex-direction:column;
+    text-align:center; opacity:0; pointer-events:none; transition:opacity .8s;
+    background:radial-gradient(circle at 50% 40%, #4a1239 0%, #120a1a 55%, #07060b 100%); }
+  #outro.show { opacity:1; }
+  #outro .clap { font-size:110px; animation:clap .6s ease-in-out infinite alternate; }
+  @keyframes clap { to { transform:scale(1.12) rotate(-6deg); } }
+  #outro h2 { font-size:64px; font-weight:900; margin-top:10px; letter-spacing:-1px; }
+  #outro h2 span { background:linear-gradient(90deg, var(--pink), var(--orange)); -webkit-background-clip:text; color:transparent; }
+  #outro p { font-size:26px; color:var(--muted); margin-top:10px; }
+  #outro .next { margin-top:44px; display:flex; align-items:center; gap:18px; padding:16px 26px 16px 16px; text-align:left; }
+  #outro .next img { width:150px; height:84px; object-fit:cover; border-radius:12px; background:#000; }
+  #outro .next small { display:block; font-size:15px; letter-spacing:2px; text-transform:uppercase; color:var(--orange); font-weight:700; }
+  #outro .next b { display:block; font-size:32px; font-weight:800; }
+  #outro .next span { display:block; font-size:17px; color:var(--muted); max-width:640px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .confetti { position:absolute; top:-20px; width:12px; height:18px; border-radius:3px; opacity:.9; animation:fall linear forwards; }
+  @keyframes fall { to { transform:translateY(115vh) rotate(720deg); } }
+
   /* Quick action feedback */
   #flash { position:absolute; left:50%; top:50%; z-index:7; transform:translate(-50%,-50%) scale(.8); opacity:0; pointer-events:none;
     padding:22px 40px; font-size:34px; font-weight:800; transition:transform .25s, opacity .25s; }
@@ -86,6 +103,7 @@
     <p>Scan the code with your phone camera,<br>pick a song, and get in line!</p>
     <div class="hint">Phones must be on this home Wi-Fi.</div>
     <div class="url urlText"></div>
+    <div id="waiting" class="glass"></div>
   </div>
   <div class="qrimg"><img class="qr" alt="QR code"></div>
 </div>
@@ -97,13 +115,20 @@
   <div style="min-width:0"><small>Up next · get ready!</small><b id="upName"></b><span id="upTitle"></span><div class="count" id="upCount"></div></div>
 </div>
 
-<div id="qrCard" class="glass">
-  <div class="qrimg"><img class="qr" alt="QR code"></div>
-  <div><b id="qrHead">Want to sing?</b><small id="qrSub">Scan with your phone camera to add a song</small><div class="u urlText"></div></div>
-</div>
+<div id="qrCard"><img class="qr" alt="QR code"></div>
 
 <div id="paused"><div class="ring"><i></i></div><p>Paused</p><small>Press OK on the remote to continue</small></div>
 <div id="flash" class="glass"></div>
+
+<div id="outro">
+  <div class="clap">👏</div>
+  <h2>Great job, <span id="outroName"></span>!</h2>
+  <p id="outroSub">Give it up for our singer!</p>
+  <div class="next glass" id="outroNext">
+    <img id="outroThumb" alt="">
+    <div style="min-width:0"><small>Up next · get ready!</small><b id="outroNextName"></b><span id="outroNextTitle"></span></div>
+  </div>
+</div>
 
 <script>
 // ---- Settings ----
@@ -112,9 +137,13 @@ const QR_SHOW_SEC = 20;        // ...for this many seconds
 const QR_AT_START_SEC = 20;    // and for the first N seconds of every song
 const UPNEXT_SEC = 25;         // pop up "Up next" in the last N seconds of a song
 const EMPTY_LINE_SEC = 90;     // if nobody is in line, keep the QR up for the last N seconds
+const END_EARLY_SEC = 12;      // finish this many seconds before the video ends, so YouTube's end-screen
+                               // suggestions never show (it's usually just the instrumental outro)
+const OUTRO_SEC = 5;           // how long the "Great job!" screen stays while the music fades
 
 let player = null, playerReady = false, loadedSongId = 0, lastVersion = 0, state = null;
 let seenRestart = null, appliedVolume = null, songStartedAt = 0, manualQrUntil = 0;
+let outroFor = 0, outroTimer = null, fadeTimer = null;
 const $ = id => document.getElementById(id);
 
 async function post(path, body) {
@@ -136,7 +165,11 @@ function flash(text) {
 }
 
 function render(st) {
-  document.body.classList.toggle('idle', !st.current);
+  document.body.classList.toggle('idle', !st.current || st.held);
+  const waiting = st.held ? st.upcoming.length + 1 : 0;
+  $('waiting').style.display = waiting ? 'block' : 'none';
+  $('waiting').innerHTML = waiting
+    ? `🎶 <b>${waiting} song${waiting > 1 ? 's' : ''}</b> waiting in line<br><span>Press <b>OK</b> on the remote or <b>Start</b> on a phone to begin</span>` : '';
   document.body.classList.toggle('paused', !!st.paused);
   document.querySelectorAll('.urlText').forEach(el => el.textContent = st.url || 'Connect the TV to Wi-Fi');
   const n = st.upcoming[0];
@@ -150,13 +183,14 @@ function render(st) {
 
 function syncPlayer(st) {
   if (!playerReady) return;
-  if (appliedVolume !== st.volume) { player.setVolume(st.volume); appliedVolume = st.volume; }
-  const cur = st.current;
+  if (appliedVolume !== st.volume && !outroFor) { player.setVolume(st.volume); appliedVolume = st.volume; }
+  const cur = st.held ? null : st.current;   // a held line (after startup) doesn't play yet
   if (!cur) {
     if (loadedSongId) { player.stopVideo(); loadedSongId = 0; }
     return;
   }
   if (cur.id !== loadedSongId) {
+    endOutro();
     loadedSongId = cur.id;
     seenRestart = st.restartSeq;
     songStartedAt = Date.now();
@@ -166,6 +200,7 @@ function syncPlayer(st) {
   }
   if (seenRestart !== st.restartSeq) {
     seenRestart = st.restartSeq;
+    endOutro();
     player.seekTo(0, true); player.playVideo();
     songStartedAt = Date.now();
     flash('⏮ From the top!');
@@ -179,7 +214,7 @@ function syncPlayer(st) {
 function overlays() {
   const st = state;
   let showQr = false, showNext = false, head = 'Want to sing?', sub = 'Scan with your phone camera to add a song';
-  if (st && st.current && playerReady) {
+  if (st && st.current && !st.held && playerReady) {
     const pos = player.getCurrentTime ? player.getCurrentTime() : 0;
     const dur = player.getDuration ? player.getDuration() : 0;
     const left = dur > 0 ? dur - pos : Infinity;
@@ -188,6 +223,8 @@ function overlays() {
     if (sinceStart < QR_AT_START_SEC) showQr = true;
     if (minute >= QR_EVERY_MIN * 60 && (minute % (QR_EVERY_MIN * 60)) < QR_SHOW_SEC) showQr = true;
     if (left <= UPNEXT_SEC && st.upcoming.length) { showNext = true; showQr = false; }
+    if (dur > 60 && left <= END_EARLY_SEC && !st.paused && outroFor !== st.current.id) startOutro(st);
+    if (outroFor) { showNext = false; showQr = false; }
     if (left <= EMPTY_LINE_SEC && !st.upcoming.length) {
       showQr = true; head = 'Nobody is next!'; sub = 'Scan now to sing the next song';
     }
@@ -195,8 +232,7 @@ function overlays() {
   }
   if (Date.now() < manualQrUntil) showQr = true;
   if (st && st.paused) showQr = true;
-  $('qrHead').textContent = head; $('qrSub').textContent = sub;
-  $('qrCard').classList.toggle('show', showQr && !(st && !st.current));
+  $('qrCard').classList.toggle('show', showQr && !!(st && st.current && !st.held));
   $('upnext').classList.toggle('show', showNext);
 }
 
@@ -217,11 +253,60 @@ setInterval(() => {
 }, 2000);
 setInterval(overlays, 500);
 
+// Cover the last seconds with our own "Great job!" screen, fade the music out, then go to the next song.
+function startOutro(st) {
+  const cur = st.current, n = st.upcoming[0];
+  outroFor = cur.id;
+  $('outroName').textContent = cur.singer;
+  $('outroSub').textContent = n ? 'Give it up for our singer!' : 'Scan the QR code to sing the next one!';
+  $('outroNext').style.display = n ? 'flex' : 'none';
+  if (n) { $('outroNextName').textContent = n.singer; $('outroNextTitle').textContent = n.title; $('outroThumb').src = n.thumb || ''; }
+  $('outro').classList.add('show');
+  confetti();
+  const startVol = st.volume, steps = 16;
+  let i = 0;
+  clearInterval(fadeTimer);
+  fadeTimer = setInterval(() => {
+    i++;
+    if (playerReady) player.setVolume(Math.max(0, Math.round(startVol * (1 - i / steps))));
+    if (i >= steps) clearInterval(fadeTimer);
+  }, (OUTRO_SEC * 1000 - 600) / steps);
+  appliedVolume = null;   // the next song puts the real volume back
+  clearTimeout(outroTimer);
+  outroTimer = setTimeout(() => {
+    if (state && state.current && state.current.id === cur.id) post('/api/next', { id: cur.id });
+    if (!n) { player.stopVideo(); setTimeout(endOutro, 600); }
+  }, OUTRO_SEC * 1000);
+}
+
+function endOutro() {
+  if (!outroFor) return;
+  outroFor = 0;
+  clearTimeout(outroTimer); clearInterval(fadeTimer);
+  appliedVolume = null;
+  $('outro').classList.remove('show');
+  document.querySelectorAll('.confetti').forEach(c => c.remove());
+}
+
+function confetti() {
+  const colors = ['#ff3d7f', '#ffa94d', '#3ddc97', '#5cc8ff', '#ffe066', '#c77dff'];
+  for (let i = 0; i < 60; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = colors[i % colors.length];
+    c.style.animationDuration = (2.5 + Math.random() * 2.5) + 's';
+    c.style.animationDelay = (Math.random() * 1.2) + 's';
+    $('outro').appendChild(c);
+  }
+}
+
 function songEnded() {
   if (state && state.current) post('/api/next', { id: state.current.id });
 }
 
 window.remote = function (cmd) {
+  if (state && state.held) { if (cmd === 'pause') post('/api/start'); return; }
   if (!state || !state.current) { if (cmd === 'toggleQr') manualQrUntil = 0; return; }
   if (cmd === 'pause') post('/api/pause');
   else if (cmd === 'skip') { flash('⏭ Skipping…'); songEnded(); }

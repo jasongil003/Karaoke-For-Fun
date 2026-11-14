@@ -88,6 +88,19 @@
   .field input { flex:1; min-width:0; background:none; border:0; outline:0; color:var(--text); font-size:17px; padding:10px 0; }
   .field input::-webkit-search-cancel-button { display:none; }
   .field .go { background:var(--pink); color:#fff; font-weight:800; padding:11px 16px; border-radius:11px; font-size:15px; }
+  /* Type-ahead suggestions */
+  .sugg { display:none; margin-top:8px; background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden;
+    box-shadow:0 14px 34px rgba(0,0,0,.5); }
+  .sugg.show { display:block; }
+  .sugg button { display:flex; align-items:center; gap:12px; width:100%; text-align:left; background:none; color:var(--text);
+    padding:12px 14px; font-size:16px; border-bottom:1px solid var(--line); }
+  .sugg button:last-child { border-bottom:0; }
+  .sugg button:active { background:var(--card2); }
+  .sugg .ic { color:var(--muted); font-size:14px; flex:none; width:18px; text-align:center; }
+  .sugg .tx { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sugg .tx b { color:var(--text); } .sugg .tx { color:#cfc9de; }
+  .sugg .edit { color:var(--muted); font-size:18px; flex:none; padding:0 4px; }
+  .sugg .head { padding:10px 14px 6px; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); font-weight:700; }
   .chips { display:flex; gap:8px; overflow-x:auto; padding:10px 0 2px; scrollbar-width:none; }
   .chips::-webkit-scrollbar { display:none; }
   .chips button { flex:none; background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:999px; padding:8px 14px; font-size:14px; font-weight:600; }
@@ -136,13 +149,50 @@
   .sheet input:focus { border-color:var(--pink); box-shadow:0 0 0 3px rgba(255,61,127,.18); }
   .sheet .primary { width:100%; margin-top:12px; padding:15px; border-radius:14px; background:linear-gradient(135deg, var(--pink), #ff6a5c); color:#fff; font-weight:800; font-size:17px; }
   .sheet .primary:disabled { opacity:.45; }
+
+  /* Share QR */
+  .hdr-right { display:flex; align-items:center; gap:8px; min-width:0; }
+  .share-btn { width:38px; height:38px; border-radius:50%; background:var(--card); border:1px solid var(--line); color:var(--text);
+    display:grid; place-items:center; flex:none; }
+  .share-btn svg { width:19px; height:19px; fill:currentColor; }
+  #shareSheet { position:fixed; inset:0; z-index:30; display:none; align-items:flex-end; justify-content:center; background:rgba(5,4,10,.72);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); }
+  #shareSheet.open { display:flex; }
+  #shareSheet .sheet { text-align:center; }
+  .bigqr { background:#fff; border-radius:20px; padding:14px; width:min(72vw, 300px); margin:4px auto 14px; }
+  .bigqr img { display:block; width:100%; height:auto; image-rendering:pixelated; }
+  .link { font-size:15px; color:var(--orange); word-break:break-all; margin-bottom:6px; }
+  .row2 { display:flex; gap:10px; margin-top:12px; }
+  .row2 button { flex:1; padding:14px; border-radius:14px; font-weight:800; font-size:16px; }
+  .row2 .ghost { background:var(--card2); color:var(--text); border:1px solid var(--line); }
+  .row2 .primary { margin-top:0; }
 </style>
 </head>
 <body>
 <header>
   <div class="brand"><div class="logo">🎤</div><div>Karaoke <span>For Fun</span></div></div>
-  <button class="chip-me" id="meBtn"><span class="av" id="meAv">?</span><span class="nm" id="meName">Set name</span></button>
+  <div class="hdr-right">
+    <button class="share-btn" id="shareBtn" aria-label="Share the QR code">
+      <svg viewBox="0 0 24 24"><path d="M3 3h7v7H3V3zm2 2v3h3V5H5zm9-2h7v7h-7V3zm2 2v3h3V5h-3zM3 14h7v7H3v-7zm2 2v3h3v-3H5zm9-2h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h3v2h-3v-2zm-4 4h2v3h-2v-3zm4 0h3v3h-2v-1h-1v-2zm-2 2h2v1h-2v-1z"/></svg>
+    </button>
+    <button class="chip-me" id="meBtn"><span class="av" id="meAv">?</span><span class="nm" id="meName">Set name</span></button>
+  </div>
 </header>
+
+<div id="shareSheet">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h2>Invite friends 🎉</h2>
+    <p>Let them scan this with their phone camera. They need to be on the same Wi-Fi.</p>
+    <div class="bigqr"><img id="shareQr" alt="QR code to join"></div>
+    <div class="link" id="shareLink"></div>
+    <div class="row2">
+      <button class="ghost" id="copyLink">📋 Copy link</button>
+      <button class="primary" id="nativeShare">📤 Share</button>
+    </div>
+    <div class="row2"><button class="ghost" id="closeShare">Done</button></div>
+  </div>
+</div>
 
 <div id="now"></div>
 <div class="myturn" id="myturn"></div>
@@ -158,6 +208,7 @@
       <input id="q" type="search" placeholder="Song title or singer…" enterkeyhint="search">
       <button class="go">Search</button>
     </form>
+    <div class="sugg" id="sugg"></div>
     <div class="chips" id="chips"></div>
   </div>
   <div class="list" id="results">
@@ -230,6 +281,29 @@ $('nameForm').addEventListener('submit', e => {
 $('sheet').addEventListener('click', e => { if (e.target.id === 'sheet' && getName()) closeSheet(); });
 $('meBtn').onclick = openSheet;
 
+/* ---- Share the QR code ---- */
+function joinUrl() { return (state && state.url) || (location.origin + '/'); }
+$('shareBtn').onclick = () => {
+  $('shareQr').src = '/qr.png?' + Date.now();
+  $('shareLink').textContent = joinUrl();
+  $('nativeShare').style.display = navigator.share ? '' : 'none';
+  $('shareSheet').classList.add('open');
+};
+$('closeShare').onclick = () => $('shareSheet').classList.remove('open');
+$('shareSheet').addEventListener('click', e => { if (e.target.id === 'shareSheet') $('shareSheet').classList.remove('open'); });
+$('copyLink').onclick = async () => {
+  const url = joinUrl();
+  try { await navigator.clipboard.writeText(url); toast('🔗 Link copied'); }
+  catch (e) {   // clipboard API needs https; fall back to a hidden text box
+    const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select();
+    try { document.execCommand('copy'); toast('🔗 Link copied'); } catch (e2) { toast('Copy: ' + url); }
+    t.remove();
+  }
+};
+$('nativeShare').onclick = () => {
+  navigator.share({ title: 'Karaoke For Fun 🎤', text: 'Join the karaoke! Pick a song here (same Wi-Fi):', url: joinUrl() }).catch(() => {});
+};
+
 /* ---- Tabs ---- */
 function showTab(which) {
   $('searchView').hidden = which !== 'search';
@@ -249,10 +323,52 @@ $('chips').addEventListener('click', e => {
 });
 $('searchForm').addEventListener('submit', e => { e.preventDefault(); search(); });
 
+/* ---- Suggestions while typing (free: no search quota) + recent searches ---- */
+function recent() { try { return JSON.parse(localStorage.getItem('vk_recent') || '[]'); } catch (e) { return []; } }
+function addRecent(q) {
+  try { localStorage.setItem('vk_recent', JSON.stringify([q, ...recent().filter(x => x.toLowerCase() !== q.toLowerCase())].slice(0, 6))); } catch (e) { }
+}
+function hideSugg() { $('sugg').classList.remove('show'); }
+function showSugg(items, typed, head) {
+  if (!items.length) { hideSugg(); return; }
+  const t = typed.trim().toLowerCase();
+  $('sugg').innerHTML = (head ? `<div class="head">${head}</div>` : '') + items.map(s => {
+    const i = t && s.toLowerCase().startsWith(t) ? t.length : 0;
+    const txt = i ? `${esc(s.slice(0, i))}<b>${esc(s.slice(i))}</b>` : `<b>${esc(s)}</b>`;
+    return `<button type="button" data-s="${esc(s)}"><span class="ic">${head ? '🕘' : '🔍'}</span><span class="tx">${txt}</span>
+      <span class="edit" data-fill="${esc(s)}" aria-label="Edit">↖</span></button>`;
+  }).join('');
+  $('sugg').classList.add('show');
+}
+let suggTimer = null, suggSeq = 0;
+$('q').addEventListener('input', () => {
+  clearTimeout(suggTimer);
+  const v = $('q').value;
+  if (v.trim().length < 2) { v.trim() ? hideSugg() : showSugg(recent(), '', 'Recent'); return; }
+  suggTimer = setTimeout(async () => {
+    const seq = ++suggSeq;
+    try {
+      const r = await (await fetch('/api/suggest?q=' + encodeURIComponent(v))).json();
+      if (seq === suggSeq && $('q').value === v) showSugg(r.items || [], v);
+    } catch (e) { }
+  }, 220);
+});
+$('q').addEventListener('focus', () => { if (!$('q').value.trim()) showSugg(recent(), '', 'Recent'); });
+$('sugg').addEventListener('click', e => {
+  const fill = e.target.closest('[data-fill]');
+  if (fill) { $('q').value = fill.dataset.fill + ' '; $('q').focus(); $('q').dispatchEvent(new Event('input')); return; }
+  const b = e.target.closest('button[data-s]');
+  if (b) { $('q').value = b.dataset.s; search(); }
+});
+document.addEventListener('click', e => { if (!e.target.closest('.searchbar')) hideSugg(); });
+
 async function search() {
   const q = $('q').value.trim();
   if (!q) return;
   $('q').blur();
+  hideSugg();
+  suggSeq++;
+  addRecent(q);
   const box = $('results');
   box.innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
   try {
@@ -305,7 +421,20 @@ const ICON = {
 };
 function render(st) {
   const now = $('now');
-  if (st.current) {
+  if (st.current && st.held) {
+    const n = st.upcoming.length + 1;
+    now.className = 'now idle';
+    now.innerHTML = `<div style="width:100%">
+        <div class="label" style="justify-content:center">Ready when you are</div>
+        <div class="who" style="white-space:normal">🎶 ${n} song${n > 1 ? 's' : ''} waiting in line</div>
+        <div class="what" style="margin-top:6px">First up: ${esc(st.current.singer)} — ${esc(st.current.title)}</div>
+        <div class="transport" style="margin-top:14px">
+          <button class="tbtn big" id="startBtn" aria-label="Start">${ICON.play}</button>
+        </div>
+        <div class="what" style="margin-top:8px">Tap to start the party</div>
+      </div>`;
+    $('startBtn').onclick = () => post('/api/start').then(() => { toast('🎤 Let\'s go!'); refresh(true); });
+  } else if (st.current) {
     const c = st.current;
     now.className = 'now';
     now.innerHTML = `
@@ -349,7 +478,8 @@ function render(st) {
   // My turn
   const myNext = st.upcoming.findIndex(s => mine(s.id));
   const mt = $('myturn');
-  if (st.current && mine(st.current.id)) { mt.textContent = '🎤 It\'s your turn — sing your heart out!'; mt.classList.add('show'); }
+  if (st.current && st.held && mine(st.current.id)) { mt.textContent = '⏳ You\'re first once the party starts!'; mt.classList.add('show'); }
+  else if (st.current && mine(st.current.id)) { mt.textContent = '🎤 It\'s your turn — sing your heart out!'; mt.classList.add('show'); }
   else if (myNext === 0) { mt.textContent = '⏳ You\'re next! Get ready.'; mt.classList.add('show'); }
   else if (myNext > 0) { mt.textContent = `🎟 You're #${myNext + 1} in line.`; mt.classList.add('show'); }
   else mt.classList.remove('show');

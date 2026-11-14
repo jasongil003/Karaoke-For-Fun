@@ -166,6 +166,8 @@ public final class WebServer {
             }
             case "/api/search":
                 json(out, new JSONObject(search(q.getOrDefault("q", "")))); return;
+            case "/api/suggest":
+                json(out, new JSONObject().put("items", suggest(q.getOrDefault("q", "")))); return;
         }
         if (!"POST".equals(method)) { send(out, 404, "text/plain", "not found".getBytes()); return; }
         JSONObject b = body.isEmpty() ? new JSONObject() : new JSONObject(body);
@@ -187,6 +189,7 @@ public final class WebServer {
             case "/api/up": queue.moveUp(b.optLong("id")); break;
             case "/api/pause": queue.togglePause(); break;
             case "/api/restart": queue.restart(); break;
+            case "/api/start": queue.start(); break;
             case "/api/volume":
                 if (b.has("value")) queue.setVolume(b.optInt("value")); else queue.changeVolume(b.optInt("delta"));
                 break;
@@ -244,6 +247,42 @@ public final class WebServer {
         }
         String out = res.put("items", items).toString();
         searchCache.put(key, out);
+        return out;
+    }
+
+    private final Map<String, JSONArray> suggestCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, JSONArray>(64, 0.75f, true) {
+                @Override protected boolean removeEldestEntry(Map.Entry<String, JSONArray> e) { return size() > 500; }
+            });
+
+    /**
+     * Type-ahead suggestions from YouTube's public suggestion service (the one youtube.com uses). Free: it does
+     * not use the API key or its daily quota. " karaoke" is added to the query and removed from the answers.
+     */
+    private JSONArray suggest(String term) {
+        term = term.trim().toLowerCase();
+        JSONArray out = new JSONArray();
+        if (term.length() < 2 || term.length() > 80) return out;
+        JSONArray cached = suggestCache.get(term);
+        if (cached != null) return cached;
+        try {
+            String qs = term.contains("karaoke") || term.contains("videoke") ? term : term + " karaoke";
+            URL url = new URL("https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&hl=en&gl="
+                    + REGION.toLowerCase() + "&ie=utf-8&oe=utf-8&q=" + URLEncoder.encode(qs, "UTF-8"));
+            HttpURLConnection c = (HttpURLConnection) url.openConnection();
+            c.setConnectTimeout(4000);
+            c.setReadTimeout(4000);
+            if (c.getResponseCode() >= 400) return out;
+            JSONArray list = new JSONArray(readAll(c.getInputStream())).optJSONArray(1);
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            for (int i = 0; list != null && i < list.length() && out.length() < 8; i++) {
+                String s = list.optString(i).replaceAll("(?i)\\b(karaoke|videoke)\\b", " ")
+                        .replaceAll("\\s+", " ").trim();
+                if (s.length() < 2 || !seen.add(s.toLowerCase())) continue;
+                out.put(s);
+            }
+            suggestCache.put(term, out);
+        } catch (Exception ignored) { }
         return out;
     }
 

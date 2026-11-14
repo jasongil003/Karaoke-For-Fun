@@ -42,6 +42,7 @@ public final class Queue {
     private int volume = 100;     // 0..100, the YouTube player's volume
     private long restartSeq = 0;  // bumps when someone asks to start the song over
     private double position, duration;  // reported by the TV player, in seconds
+    private boolean held;         // at startup a saved line waits: nothing plays until someone presses Start
     private SharedPreferences prefs;
 
     private Queue() {}
@@ -59,6 +60,8 @@ public final class Queue {
             JSONArray up = o.optJSONArray("upcoming");
             for (int i = 0; up != null && i < up.length(); i++) upcoming.add(Song.from(up.getJSONObject(i)));
         } catch (JSONException ignored) { }
+        // Never play on startup: the saved line waits behind the full-screen QR code until someone starts it.
+        held = current != null;
         version++;
     }
 
@@ -106,7 +109,13 @@ public final class Queue {
         }
     }
 
-    public synchronized void togglePause() { if (current != null) { paused = !paused; changed(); } }
+    public synchronized void togglePause() {
+        if (held) { start(); return; }
+        if (current != null) { paused = !paused; changed(); }
+    }
+
+    /** Starts a line that was held at startup. */
+    public synchronized void start() { if (held) { held = false; paused = false; changed(); } }
 
     public synchronized void restart() { if (current != null) { restartSeq++; paused = false; position = 0; changed(); } }
 
@@ -119,7 +128,7 @@ public final class Queue {
         if (current != null && current.id == id) { position = pos; duration = dur; }
     }
 
-    public synchronized void clear() { upcoming.clear(); current = null; paused = false; changed(); }
+    public synchronized void clear() { upcoming.clear(); current = null; paused = false; held = false; changed(); }
 
     public synchronized JSONObject state() {
         try {
@@ -128,6 +137,7 @@ public final class Queue {
             return new JSONObject()
                     .put("version", version)
                     .put("paused", paused)
+                    .put("held", held)
                     .put("volume", volume)
                     .put("restartSeq", restartSeq)
                     .put("position", position)
